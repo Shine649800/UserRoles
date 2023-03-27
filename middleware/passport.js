@@ -4,7 +4,7 @@ const {User, Role, Permission} = require('../models');
 const md5 = require('md5');
 
 async function verifyUser(username, password, done) {
-    const user = User.findOne({
+    const user = await User.findOne({
         where: {
             email: username,
             password: md5(password)
@@ -28,3 +28,31 @@ passport.use(
         verifyUser
     )
 );
+
+passport.serializeUser(function (user, done) {
+    process.nextTick(function (){
+        done(null, {id: user.id});
+    });
+});
+
+passport.deserializeUser(async function (user, done){
+    const userModel = await User.findByPk(user.id, {
+        include: [
+            {
+                model: Role,
+                as: 'role',
+                include: [
+                    {
+                        model: Permission,
+                        as: 'permissions'
+                    }
+                ],
+            }
+        ]
+    });
+    process.nextTick(function(){
+        return done(null, userModel);
+    });
+});
+
+module.exports.passport = passport;
